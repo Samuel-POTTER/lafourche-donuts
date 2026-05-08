@@ -26,7 +26,7 @@ app.post(
   async (req: Request, res: Response) => {
     const { command } = req.body;
 
-    if (command === "/lafourche-donuts" || command === "/lafourcheDonuts") {
+    if (command === "/lafourche-donuts") {
       await handleLafourcheDonuts(req, res);
     } else {
       res.status(200).json({ text: "Commande inconnue." });

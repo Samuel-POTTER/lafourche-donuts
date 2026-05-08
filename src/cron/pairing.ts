@@ -113,15 +113,6 @@ export async function runPairing(): Promise<void> {
         }
       }
 
-      const pairsMentions = pairs.map(([a, b]) => `• <@${a}> 🤝 <@${b}>`).join("\n");
-      const unpairedNote = unpairedUser
-        ? `\n\n_<@${unpairedUser}> n'a pas de match cette semaine mais sera prioritaire la semaine prochaine !_`
-        : "";
-
-      await slackClient.chat.postMessage({
-        channel: channel.slack_channel_id,
-        text: `🍩 *Lafourche-Donuts de la semaine !*\n\nVoici les matchs de cette semaine :\n${pairsMentions}${unpairedNote}\n\nBon meet à tous ! ☕`,
-      });
     } catch (err) {
       console.error(`[CRON] Erreur sur channel ${channel.slack_channel_id}:`, err);
     }

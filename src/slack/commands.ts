@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import { slackClient } from "../config";
 import { getChannel, createChannel, updateChannelStatus } from "../db/queries";
 
 function nextMondayParis(): string {
@@ -31,29 +30,36 @@ function nextMondayParis(): string {
   });
 }
 
+// Poste via response_url — ne requiert pas que le bot soit membre du channel
+async function postToChannel(responseUrl: string, text: string): Promise<void> {
+  await fetch(responseUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ response_type: "in_channel", text }),
+  });
+}
+
 export async function handleLafourcheDonuts(req: Request, res: Response): Promise<void> {
-  const { channel_id, channel_name, text } = req.body;
+  const { channel_id, channel_name, text, response_url } = req.body;
   const command = (text || "").trim().toLowerCase();
 
-  res.status(200).json({ response_type: "ephemeral", text: "⏳ Traitement en cours..." });
+  // Accusé de réception immédiat (Slack impose < 3s)
+  res.status(200).send();
 
   try {
     if (command === "stop") {
       const channel = await getChannel(channel_id);
 
       if (!channel || channel.status === "inactive") {
-        await slackClient.chat.postMessage({
-          channel: channel_id,
-          text: "⚠️ Lafourche-Donuts n'est pas actif sur ce channel.",
-        });
+        await postToChannel(response_url, "⚠️ Lafourche-Donuts n'est pas actif sur ce channel.");
         return;
       }
 
       await updateChannelStatus(channel.id, "inactive");
-      await slackClient.chat.postMessage({
-        channel: channel_id,
-        text: "⏸️ *Lafourche-Donuts est maintenant en pause* sur ce channel.\n\nLes pairings hebdomadaires sont arrêtés. Pour les réactiver, utilisez simplement `/lafourcheDonuts`.",
-      });
+      await postToChannel(
+        response_url,
+        "⏸️ *Lafourche-Donuts est maintenant en pause* sur ce channel.\n\nLes pairings hebdomadaires sont arrêtés. Pour les réactiver, utilisez simplement `/lafourche-donuts`."
+      );
       return;
     }
 
@@ -62,29 +68,26 @@ export async function handleLafourcheDonuts(req: Request, res: Response): Promis
     if (!existingChannel) {
       await createChannel(channel_id, channel_name);
       const nextDate = nextMondayParis();
-      await slackClient.chat.postMessage({
-        channel: channel_id,
-        text: `🍩 *Lafourche-Donuts est activé sur ce channel !*\n\nChaque lundi, des membres seront matchés en duo. Le premier pairing aura lieu le *${nextDate} à 10h00*.\n\nPour mettre en pause : \`/lafourcheDonuts stop\``,
-      });
+      await postToChannel(
+        response_url,
+        `🍩 *Lafourche-Donuts est activé sur ce channel !*\n\nChaque lundi, des membres seront matchés en duo. Le premier pairing aura lieu le *${nextDate} à 10h00*.\n\nPour mettre en pause : \`/lafourche-donuts stop\``
+      );
     } else if (existingChannel.status === "inactive") {
       await updateChannelStatus(existingChannel.id, "active");
       const nextDate = nextMondayParis();
-      await slackClient.chat.postMessage({
-        channel: channel_id,
-        text: `🍩 *Lafourche-Donuts est de nouveau actif !*\n\nLes pairings reprennent. Le prochain matching aura lieu le *${nextDate} à 10h00*.\n\nPour mettre en pause : \`/lafourcheDonuts stop\``,
-      });
+      await postToChannel(
+        response_url,
+        `🍩 *Lafourche-Donuts est de nouveau actif !*\n\nLes pairings reprennent. Le prochain matching aura lieu le *${nextDate} à 10h00*.\n\nPour mettre en pause : \`/lafourche-donuts stop\``
+      );
     } else {
       const nextDate = nextMondayParis();
-      await slackClient.chat.postMessage({
-        channel: channel_id,
-        text: `🍩 Lafourche-Donuts est déjà actif sur ce channel ! Prochain matching programmé pour le *${nextDate} à 10h00*.`,
-      });
+      await postToChannel(
+        response_url,
+        `🍩 Lafourche-Donuts est déjà actif sur ce channel ! Prochain matching programmé pour le *${nextDate} à 10h00*.`
+      );
     }
   } catch (err) {
     console.error("Erreur handleLafourcheDonuts:", err);
-    await slackClient.chat.postMessage({
-      channel: channel_id,
-      text: "❌ Une erreur s'est produite. Réessaie dans quelques instants.",
-    });
+    await postToChannel(response_url, "❌ Une erreur s'est produite. Réessaie dans quelques instants.");
   }
 }

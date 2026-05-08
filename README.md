@@ -83,8 +83,8 @@ Le endpoint `/cron/pairing` requiert le header `x-cron-secret: <CRON_SECRET>`.
 
 | Commande | Effet |
 |---|---|
-| `/lafourcheDonuts` | Active le bot sur le channel (ou affiche la date du prochain run) |
-| `/lafourcheDonuts stop` | Met le bot en pause sur le channel |
+| `/lafourche-donuts` | Active le bot sur le channel (ou affiche la date du prochain run) |
+| `/lafourche-donuts stop` | Met le bot en pause sur le channel |
 
 ## Configuration Slack App
 
