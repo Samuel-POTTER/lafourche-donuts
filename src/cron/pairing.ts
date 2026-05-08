@@ -42,11 +42,15 @@ async function getHumanMembers(channelId: string): Promise<string[]> {
   return members;
 }
 
-const DM_MESSAGE =
-  "👋 Hello ! Vous avez été matchés cette semaine pour un *Lafourche-Donuts* 🍩\n\n" +
-  "Prenez un moment durant la semaine pour vous caler un meet et discuter un peu de tout et de rien — " +
-  "pour apprendre à vous connaître !\n\n" +
-  "On essaie d'éviter de parler boulot hein 😄 *15-30 min* (ou plus si vous ne voyez pas le temps passer aha).";
+function dmMessage(userA: string, userB: string): string {
+  return (
+    `👋 Hello <@${userA}>, <@${userB}> !\n\n` +
+    "Vous avez été matchés cette semaine pour un *Lafourche-Donuts* 🍩\n\n" +
+    "Prenez un moment durant la semaine pour vous caler un meet et discuter un peu de tout et de rien — " +
+    "pour apprendre à vous connaître !\n\n" +
+    "On essaie d'éviter de parler boulot hein 😄 *15-30 min* (ou plus si vous ne voyez pas le temps passer aha)."
+  );
+}
 
 export async function runPairing(): Promise<void> {
   const weekDate = getCurrentMondayDate();
@@ -104,7 +108,7 @@ export async function runPairing(): Promise<void> {
 
           await slackClient.chat.postMessage({
             channel: dmChannelId,
-            text: DM_MESSAGE,
+            text: dmMessage(userA, userB),
           });
 
           console.log(`[CRON] DM envoyé à ${userA} + ${userB}`);
