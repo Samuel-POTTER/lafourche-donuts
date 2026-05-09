@@ -55,7 +55,7 @@ function parseMentionedUserId(text: string): string | null {
 }
 
 export async function handleLafourcheDonuts(req: Request, res: Response): Promise<void> {
-  const { channel_id, channel_name, text, response_url } = req.body;
+  const { channel_id, channel_name, user_id, text, response_url } = req.body;
   const rawText = (text || "").trim();
   const command = rawText.toLowerCase().split(/\s+/)[0];
 
@@ -122,14 +122,14 @@ export async function handleLafourcheDonuts(req: Request, res: Response): Promis
 
       if (command === "skip") {
         await skipUser(channel.id, userId);
-        await postEphemeral(response_url, `✅ Fait. <@${userId}> ne sera plus inclus dans les pairings à partir de la prochaine session.`);
+        await postToChannel(response_url, `⏭️ <@${userId}> ne participera pas aux prochains pairings *Lafourche-Donuts* sur ce channel.`);
         await slackClient.chat.postMessage({
-          channel: userId,
-          text: `⏭️ Tu as été exclu(e) des matchs *Lafourche-Donuts* sur <#${channel_id}>.\n\nÀ partir de la prochaine session, tu ne seras plus pris(e) en compte dans les pairings.\n\nPour revenir dans le pool, tape dans le channel :\n\`/lafourche-donuts unskip <@${userId}>\``,
+          channel: user_id,
+          text: `Pour remettre <@${userId}> dans le pool de matching, utilise la commande dans le channel :\n\`/lafourche-donuts unskip <@${userId}>\``,
         });
       } else {
         await unskipUser(channel.id, userId);
-        await postEphemeral(response_url, `✅ <@${userId}> est de nouveau dans le pool de matching à partir de la prochaine session.`);
+        await postToChannel(response_url, `✅ <@${userId}> est de nouveau dans le pool de matching *Lafourche-Donuts*.`);
       }
       return;
     }
