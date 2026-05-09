@@ -114,7 +114,10 @@ export async function saveUnpairedUser(
 export async function skipUser(channelId: string, slackUserId: string): Promise<void> {
   const { error } = await supabase
     .from("skipped_users")
-    .upsert({ channel_id: channelId, slack_user_id: slackUserId });
+    .upsert(
+      { channel_id: channelId, slack_user_id: slackUserId },
+      { onConflict: "channel_id,slack_user_id" }
+    );
 
   if (error) throw error;
 }
