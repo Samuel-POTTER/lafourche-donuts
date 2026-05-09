@@ -5,6 +5,7 @@ import {
   getLastUnpairedUser,
   insertMatches,
   saveUnpairedUser,
+  getSkippedUsers,
 } from "../db/queries";
 import { generatePairs } from "../utils/matching";
 
@@ -63,7 +64,15 @@ export async function runPairing(): Promise<void> {
     try {
       console.log(`[CRON] Traitement du channel ${channel.slack_channel_id}`);
 
-      const members = await getHumanMembers(channel.slack_channel_id);
+      const allMembers = await getHumanMembers(channel.slack_channel_id);
+      const skipped = await getSkippedUsers(channel.id);
+      const members = skipped.length > 0
+        ? allMembers.filter((u) => !skipped.includes(u))
+        : allMembers;
+
+      if (skipped.length > 0) {
+        console.log(`[CRON] ${skipped.length} membre(s) skippé(s) : ${skipped.join(", ")}`);
+      }
       console.log(`[CRON] ${members.length} membres humains trouvés`);
 
       if (members.length < 2) {

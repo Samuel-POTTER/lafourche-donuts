@@ -110,3 +110,31 @@ export async function saveUnpairedUser(
 
   if (error) throw error;
 }
+
+export async function skipUser(channelId: string, slackUserId: string): Promise<void> {
+  const { error } = await supabase
+    .from("skipped_users")
+    .upsert({ channel_id: channelId, slack_user_id: slackUserId });
+
+  if (error) throw error;
+}
+
+export async function unskipUser(channelId: string, slackUserId: string): Promise<void> {
+  const { error } = await supabase
+    .from("skipped_users")
+    .delete()
+    .eq("channel_id", channelId)
+    .eq("slack_user_id", slackUserId);
+
+  if (error) throw error;
+}
+
+export async function getSkippedUsers(channelId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("skipped_users")
+    .select("slack_user_id")
+    .eq("channel_id", channelId);
+
+  if (error) throw error;
+  return (data || []).map((r) => r.slack_user_id);
+}

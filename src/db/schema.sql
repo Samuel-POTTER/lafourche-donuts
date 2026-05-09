@@ -27,7 +27,17 @@ CREATE TABLE unpaired_users (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Utilisateurs exclus temporairement du pool de matching
+CREATE TABLE skipped_users (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  channel_id UUID REFERENCES channels(id) ON DELETE CASCADE,
+  slack_user_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(channel_id, slack_user_id)
+);
+
 -- Index utiles
 CREATE INDEX idx_matches_channel_id ON matches(channel_id);
 CREATE INDEX idx_matches_users ON matches(user_a, user_b);
 CREATE INDEX idx_unpaired_channel ON unpaired_users(channel_id);
+CREATE INDEX idx_skipped_channel ON skipped_users(channel_id);
