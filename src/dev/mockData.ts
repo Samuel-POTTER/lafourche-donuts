@@ -5,9 +5,10 @@ export const MOCK_MEMBERS = [
   "U_BOB",
   "U_CHARLIE",
   "U_DIANA",
+  "U_EVE",
 ];
 
 // Mettre ici le Slack channel ID du channel de test
 // Se trouve dans les infos du channel Slack : clic droit sur le channel → "Copier le lien"
 // L'ID commence par C (ex: C08XXXXXXXX)
-export const MOCK_CHANNEL_ID = "C0B09UE1734";
+export const MOCK_CHANNEL_ID = "TON_CHANNEL_ID_ICI";
