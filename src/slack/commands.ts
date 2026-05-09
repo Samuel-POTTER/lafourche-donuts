@@ -48,16 +48,45 @@ async function postEphemeral(responseUrl: string, text: string): Promise<void> {
   });
 }
 
-// Extrait l'ID utilisateur d'une mention Slack : <@U12345> ou <@U12345|name>
-function parseMentionedUserId(text: string): string | null {
-  const match = text.match(/<@([A-Z0-9]+)(?:\|[^>]+)?>/);
-  return match ? match[1] : null;
+// Résout un user ID depuis le texte : format <@U12345> (autocomplete) ou @displayname (saisie libre)
+// En cas de saisie libre, cherche uniquement parmi les membres du channel pour limiter les appels API.
+async function resolveUserId(text: string, channelId: string): Promise<string | null> {
+  const mentionMatch = text.match(/<@([A-Z0-9]+)(?:\|[^>]+)?>/i);
+  if (mentionMatch) return mentionMatch[1];
+
+  const nameMatch = text.match(/@([\w.]+)/);
+  if (!nameMatch) return null;
+
+  const searchName = nameMatch[1].toLowerCase();
+  let cursor: string | undefined;
+
+  do {
+    const result = await slackClient.conversations.members({ channel: channelId, limit: 200, cursor });
+    cursor = result.response_metadata?.next_cursor || undefined;
+
+    for (const userId of result.members || []) {
+      const info = await slackClient.users.info({ user: userId });
+      const u = info.user;
+      if (!u || u.deleted || u.is_bot) continue;
+      if (
+        u.name?.toLowerCase() === searchName ||
+        u.profile?.display_name?.toLowerCase() === searchName ||
+        u.profile?.real_name?.toLowerCase().replace(/\s+/g, ".") === searchName
+      ) {
+        return userId;
+      }
+    }
+  } while (cursor);
+
+  return null;
 }
 
 export async function handleLafourcheDonuts(req: Request, res: Response): Promise<void> {
   const { channel_id, channel_name, user_id, text, response_url } = req.body;
   const rawText = (text || "").trim();
   const command = rawText.toLowerCase().split(/\s+/)[0];
+
+  console.log(`[CMD] channel=${channel_id} user=${user_id} text="${rawText}" command="${command}"`);
 
   // Accusé de réception immédiat (Slack impose < 3s)
   res.status(200).send();
@@ -107,10 +136,10 @@ export async function handleLafourcheDonuts(req: Request, res: Response): Promis
     }
 
     if (command === "skip" || command === "unskip") {
-      const userId = parseMentionedUserId(rawText);
+      const userId = await resolveUserId(rawText, channel_id);
 
       if (!userId) {
-        await postEphemeral(response_url, `⚠️ Utilisation : \`/lafourche-donuts ${command} @utilisateur\``);
+        await postEphemeral(response_url, `⚠️ Utilisateur introuvable. Utilisation : \`/lafourche-donuts ${command} @utilisateur\``);
         return;
       }
 
