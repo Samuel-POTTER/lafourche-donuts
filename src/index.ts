@@ -4,7 +4,7 @@ import { verifySlackSignature } from "./slack/middleware";
 import { handleLafourcheDonuts } from "./slack/commands";
 import { runPairing, runPairingWithMembers } from "./cron/pairing";
 import { generatePairs } from "./utils/matching";
-import { getChannel, createChannel, skipUser, unskipUser, getSkippedUsers, getMatchHistory, getLastUnpairedUser } from "./db/queries";
+import { getChannel, createChannel, skipUser, unskipUser, getSkippedUsers, getMatchHistory, getLastUnpairedUser, getActiveChannels } from "./db/queries";
 
 const app = express();
 
@@ -20,6 +20,15 @@ app.use(express.json());
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+app.get("/db-health", async (_req, res) => {
+  try {
+    await getActiveChannels();
+    res.json({ status: "ok", db: "reachable", timestamp: new Date().toISOString() });
+  } catch (err) {
+    res.status(503).json({ status: "error", db: "unreachable", timestamp: new Date().toISOString() });
+  }
 });
 
 app.post(
