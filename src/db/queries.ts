@@ -141,3 +141,22 @@ export async function getSkippedUsers(channelId: string): Promise<string[]> {
   if (error) throw error;
   return (data || []).map((r) => r.slack_user_id);
 }
+
+export interface SlackUser {
+  slack_user_id: string;
+  name: string | null;
+}
+
+export async function upsertUsers(users: SlackUser[]): Promise<void> {
+  if (users.length === 0) return;
+
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from("users")
+    .upsert(
+      users.map((u) => ({ ...u, updated_at: now })),
+      { onConflict: "slack_user_id" }
+    );
+
+  if (error) throw error;
+}

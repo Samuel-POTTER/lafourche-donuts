@@ -59,7 +59,7 @@ cp .env.example .env
 
 Exécuter `src/db/schema.sql` dans le SQL Editor de Supabase (Dashboard → SQL Editor → New query).
 
-Crée trois tables : `channels`, `matches`, `unpaired_users`.
+Crée les tables `channels`, `matches`, `unpaired_users`, `skipped_users`, `users` et la vue `matches_readable` (historique des matchs avec les noms).
 
 ## Commandes
 

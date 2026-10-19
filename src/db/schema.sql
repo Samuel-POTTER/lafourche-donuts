@@ -36,6 +36,27 @@ CREATE TABLE skipped_users (
   UNIQUE(channel_id, slack_user_id)
 );
 
+-- Noms des utilisateurs Slack (affichage uniquement, la clé reste slack_user_id)
+CREATE TABLE users (
+  slack_user_id TEXT PRIMARY KEY,
+  name TEXT,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Historique des matchs lisible (noms au lieu des IDs Slack)
+CREATE VIEW matches_readable WITH (security_invoker = true) AS
+SELECT
+  m.week_date,
+  c.slack_channel_name AS channel,
+  COALESCE(ua.name, m.user_a) AS user_a,
+  COALESCE(ub.name, m.user_b) AS user_b,
+  m.user_a AS user_a_id,
+  m.user_b AS user_b_id
+FROM matches m
+JOIN channels c ON c.id = m.channel_id
+LEFT JOIN users ua ON ua.slack_user_id = m.user_a
+LEFT JOIN users ub ON ub.slack_user_id = m.user_b;
+
 -- Index utiles
 CREATE INDEX idx_matches_channel_id ON matches(channel_id);
 CREATE INDEX idx_matches_users ON matches(user_a, user_b);

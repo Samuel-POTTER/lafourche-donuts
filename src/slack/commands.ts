@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { slackClient } from "../config";
-import { getChannel, createChannel, updateChannelStatus, skipUser, unskipUser, getSkippedUsers } from "../db/queries";
+import { getChannel, createChannel, updateChannelStatus, skipUser, unskipUser, getSkippedUsers, upsertUsers } from "../db/queries";
+import { slackUserName } from "../cron/pairing";
 
 // Poste via response_url — ne requiert pas que le bot soit membre du channel
 async function postToChannel(responseUrl: string, text: string): Promise<void> {
@@ -115,6 +116,13 @@ export async function handleLafourcheDonuts(req: Request, res: Response): Promis
       if (!channel) {
         await postEphemeral(response_url, "⚠️ Lafourche-Donuts n'est pas encore configuré sur ce channel. Lance d'abord `/lafourche-donuts start`.");
         return;
+      }
+
+      try {
+        const info = await slackClient.users.info({ user: userId });
+        await upsertUsers([{ slack_user_id: userId, name: slackUserName(info.user) }]);
+      } catch (err) {
+        console.error(`[CMD] Erreur sauvegarde du nom de ${userId}:`, err);
       }
 
       if (command === "skip") {

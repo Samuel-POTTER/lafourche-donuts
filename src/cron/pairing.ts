@@ -9,6 +9,8 @@ import {
   getChannel,
   skipUser,
   unskipUser,
+  upsertUsers,
+  SlackUser,
 } from "../db/queries";
 import { generatePairs } from "../utils/matching";
 
@@ -23,8 +25,8 @@ function getCurrentMondayDate(): string {
   return monday.toISOString().split("T")[0];
 }
 
-async function getHumanMembers(channelId: string): Promise<string[]> {
-  const members: string[] = [];
+async function getHumanMembers(channelId: string): Promise<SlackUser[]> {
+  const members: SlackUser[] = [];
   let cursor: string | undefined;
 
   do {
@@ -40,12 +42,16 @@ async function getHumanMembers(channelId: string): Promise<string[]> {
     for (const userId of ids) {
       const info = await slackClient.users.info({ user: userId });
       if (!info.user?.is_bot && !info.user?.deleted) {
-        members.push(userId);
+        members.push({ slack_user_id: userId, name: slackUserName(info.user) });
       }
     }
   } while (cursor);
 
   return members;
+}
+
+export function slackUserName(user?: { name?: string; real_name?: string; profile?: { real_name?: string; display_name?: string } }): string | null {
+  return user?.profile?.real_name || user?.real_name || user?.profile?.display_name || user?.name || null;
 }
 
 function dmMessage(userA: string, userB: string): string {
@@ -73,7 +79,18 @@ export async function runPairingWithMembers(
 
   console.log(`${label} Traitement du channel ${slackChannelId}`);
 
-  const allMembers = mockedMembers ?? await getHumanMembers(slackChannelId);
+  let allMembers: string[];
+  if (mockedMembers) {
+    allMembers = mockedMembers;
+  } else {
+    const humans = await getHumanMembers(slackChannelId);
+    allMembers = humans.map((u) => u.slack_user_id);
+    try {
+      await upsertUsers(humans);
+    } catch (err) {
+      console.error(`${label} Erreur sauvegarde des noms utilisateurs:`, err);
+    }
+  }
   const skipped = await getSkippedUsers(channel.id);
   const members = skipped.length > 0
     ? allMembers.filter((u) => !skipped.includes(u))
